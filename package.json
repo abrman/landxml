@@ -1,0 +1,31 @@
+{
+  "name": "landxml",
+  "version": "0.0.1",
+  "description": "Parse LandXML surfaces on the modern web.",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "private": false,
+  "scripts": {
+    "dev": "vitest",
+    "test": "vitest run",
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "lint": "tsc",
+    "ci": "npm run lint && npm run test && npm run build",
+    "release": "npm run lint && npm run test && npm run build && changeset publish"
+  },
+  "keywords": [
+    "landxml",
+    "geojson",
+    "gltf"
+  ],
+  "author": "Matthew Abrman",
+  "license": "MIT",
+  "devDependencies": {
+    "@changesets/cli": "^2.26.2",
+    "tsup": "^8.0.0",
+    "typescript": "^5.2.2",
+    "vitest": "^0.34.6"
+  },
+  "dependencies": {}
+}
