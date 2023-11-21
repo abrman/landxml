@@ -22,7 +22,7 @@ const loadGeojson = async () => {
     let { geojson, wktString } = geojsonSurfaces[0];
 
     // Reproject GeoJSON to a desired coordinate system (e.g., WGS84)
-    const targetCoordinateSystem = "WGS84";
+    const targetCoordinateSystem = wktString || "WGS84";
     const keepOriginalGeometryAsFeatureProperties = false;
     return reprojectGeoJson(geojson, wktString, targetCoordinateSystem, keepOriginalGeometryAsFeatureProperties);
 }
