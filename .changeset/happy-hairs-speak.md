@@ -1,0 +1,5 @@
+---
+"landxml": minor
+---
+
+Added tests
