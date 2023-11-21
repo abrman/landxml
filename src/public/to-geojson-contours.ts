@@ -19,7 +19,21 @@ const toGeojsonContours = async (
   landXmlString: string,
   contourInterval: number = 2,
   surfaceId: string | number = -1
-) => {
+): Promise<
+  {
+    name: string;
+    description: string;
+    sourceFile: string;
+    timeStamp: string;
+    wktString?: string;
+    geojson: FeatureCollection<
+      LineString,
+      {
+        z: number;
+      }
+    >;
+  }[]
+> => {
   let requestedParsedSurfaces = filterBySurfaceId(await parseXML(landXmlString), surfaceId);
 
   const contours = await Promise.all(
