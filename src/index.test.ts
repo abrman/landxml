@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import parseXML from "./private/parse-xml";
 import getGlb from "./private/get-glb";
 import getContours from "./private/get-contours";
-import { toGeojsonContours } from "../dist";
+import toGeojsonContours from "./public/to-geojson-contours";
 import reprojectGeoJson from "./public/reproject-geojson";
 
 const example_single_surface_landxml_with_sourcedata_breakline = `<?xml version="1.0"?>
