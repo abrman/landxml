@@ -1,5 +1,16 @@
 # landxml
 
+## 0.2.0
+
+### Minor Changes
+
+- ae3bcf7: Swapped xml reader package from `xml2json` to `xml-js`
+- ae3bcf7: Added `glb` download example into README.md
+
+### Patch Changes
+
+- ae3bcf7: Fixed dependency list
+
 ## 0.1.0
 
 ### Minor Changes
