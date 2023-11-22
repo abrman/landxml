@@ -23,6 +23,7 @@
   "license": "MIT",
   "devDependencies": {
     "@changesets/cli": "^2.26.2",
+    "@types/geojson": "^7946.0.13",
     "@types/proj4": "^2.5.5",
     "@types/xml2json": "^0.11.6",
     "tsup": "^8.0.0",
@@ -31,8 +32,7 @@
   },
   "dependencies": {
     "@gltf-transform/core": "^3.9.0",
-    "@types/geojson": "^7946.0.13",
     "proj4": "^2.9.2",
-    "xml2json": "^0.12.0"
+    "xml-js": "^1.6.11"
   }
 }

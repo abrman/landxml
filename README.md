@@ -27,3 +27,22 @@ const loadGeojson = async () => {
     return reprojectGeoJson(geojson, wktString, targetCoordinateSystem, keepOriginalGeometryAsFeatureProperties);
 }
 ```
+
+### Example: Convert to GLB 3D model
+
+```typescript
+import { toGlb } from "landxml";
+
+const LandXml2GlbModel = async () => {
+    const landXmlString = "<?xml version="1.0"?>...</LandXML>";
+
+    // Define how the model's origin should be positioned (options: "origin" | "auto" | [x: number, y: number])
+    const center = "auto";
+    const glbSurfaces = await toGlb(landXmlString, center);
+
+    let { download, glb } = glbSurfaces[0];
+    download()
+
+    // Alternatively, process the raw binary data from the 'glb' variable (Uint8Array)
+}
+```
