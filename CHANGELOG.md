@@ -1,5 +1,11 @@
 # landxml
 
+## 0.3.0
+
+### Minor Changes
+
+- 0fe8297: Added homepage & repository to `package.json`
+
 ## 0.2.0
 
 ### Minor Changes
