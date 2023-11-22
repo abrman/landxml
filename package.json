@@ -6,6 +6,11 @@
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "private": false,
+  "homepage": "https://github.com/abrman/landxml#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abrman/landxml"
+  },
   "scripts": {
     "dev": "vitest",
     "test": "vitest run",
