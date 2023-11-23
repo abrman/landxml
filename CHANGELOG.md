@@ -1,5 +1,11 @@
 # landxml
 
+## 0.4.0
+
+### Minor Changes
+
+- e2e4513: Rewrote contour lines polyline builder
+
 ## 0.3.0
 
 ### Minor Changes
