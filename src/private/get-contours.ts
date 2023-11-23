@@ -20,55 +20,57 @@ const linesToPolyLines = (lineSegments: [[number, number], [number, number]][]) 
     throw new Error("Invalid input: Please provide a non-empty array of line segments.");
   }
 
-  const segmentsMap = new Map();
+  const segmentsMapIndexes: { [coordinateKey: string]: number[] } = {};
   const polylines: [number, number][][] = [];
+  const parsedSegmentIndexes: number[] = [];
 
-  lineSegments.forEach(([start, end]) => {
-    const startKey = start.join(",");
-    const endKey = end.join(",");
+  const lineSegmentStrings = lineSegments.map((v) => v.map((c) => c.join(","))) as [string, string][];
 
-    segmentsMap.set(startKey, segmentsMap.get(startKey) || []);
-    segmentsMap.set(endKey, segmentsMap.get(endKey) || []);
-
-    segmentsMap.get(startKey).push(end);
-    segmentsMap.get(endKey).push(start);
+  lineSegmentStrings.forEach(([start, end], i) => {
+    segmentsMapIndexes[start] = segmentsMapIndexes[start] ? [...(segmentsMapIndexes[start] || []), i] : [i];
+    segmentsMapIndexes[end] = segmentsMapIndexes[end] ? [...(segmentsMapIndexes[end] || []), i] : [i];
   });
 
-  const constructPolyline = (start: [number, number], polyline: [number, number][]) => {
-    let current = start;
-    while (segmentsMap.has(current.join(",")) && segmentsMap.get(current.join(",")).length > 0) {
-      const next = segmentsMap.get(current.join(",")).pop();
-      polyline.push(current);
-      if (next) {
-        const nextKey = next.join(",");
-        segmentsMap.delete(current.join(","));
-        current = next;
-        if (segmentsMap.has(nextKey)) {
-          segmentsMap.set(
-            nextKey,
-            (segmentsMap.get(nextKey) || []).filter((point: [number, number]) => point.join(",") !== current.join(","))
-          );
-        }
+  for (let i = 0; i < lineSegmentStrings.length; i++) {
+    if (parsedSegmentIndexes.includes(i)) continue;
+
+    parsedSegmentIndexes.push(i);
+
+    let [start, end]: (string | null)[] = lineSegmentStrings[i] as [string, string];
+    let polyline = [start, end];
+
+    while (start && segmentsMapIndexes[start]) {
+      const nextLineIndex: number | undefined = segmentsMapIndexes[start]?.find(
+        (lineIndex) => !parsedSegmentIndexes.includes(lineIndex)
+      );
+      if (nextLineIndex) {
+        parsedSegmentIndexes.push(nextLineIndex);
+        const nextLineSegment = lineSegmentStrings[nextLineIndex] as [string, string];
+        const nextLineSegmentPointIndex: number = nextLineSegment[0] === start ? 1 : 0;
+        const newPoint = nextLineSegment[nextLineSegmentPointIndex] as string;
+        polyline.unshift(newPoint);
+        start = newPoint;
+      } else {
+        start = null;
       }
     }
-    polyline.push(current);
-    return polyline;
-  };
 
-  const traverseSegmentsMap = (endpoints: [number, number][], startKey: string) => {
-    let start = startKey.split(",").map(Number) as [number, number];
-    while (endpoints.length > 0) {
-      const newPolyline = constructPolyline(start, []);
-      polylines.push(newPolyline);
-      start = endpoints.pop() as [number, number];
+    while (end && segmentsMapIndexes[end]) {
+      const nextLineIndex: number | undefined = segmentsMapIndexes[end]?.find(
+        (lineIndex) => !parsedSegmentIndexes.includes(lineIndex)
+      );
+      if (nextLineIndex) {
+        parsedSegmentIndexes.push(nextLineIndex);
+        const nextLineSegment = lineSegmentStrings[nextLineIndex] as [string, string];
+        const nextLineSegmentPointIndex: number = nextLineSegment[0] === end ? 1 : 0;
+        const newPoint = nextLineSegment[nextLineSegmentPointIndex] as string;
+        polyline.push(newPoint);
+        end = newPoint;
+      } else {
+        end = null;
+      }
     }
-  };
-
-  for (const [startKey, endpoints] of segmentsMap.entries()) {
-    if (endpoints && endpoints.length === 0) {
-      continue;
-    }
-    traverseSegmentsMap(endpoints || [], startKey);
+    polylines.push(polyline.map((coord) => coord.split(",").map((v) => parseFloat(v)) as [number, number]));
   }
 
   return polylines;
@@ -139,3 +141,4 @@ const getContours = async (data: ParsedSurface, interval: number = 2) => {
 };
 
 export default getContours;
+export { contourLineOnFace, linesToPolyLines, contourElevations, constructGeojson };
