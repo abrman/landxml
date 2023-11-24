@@ -76,12 +76,15 @@ const linesToPolyLines = (lineSegments: [[number, number], [number, number]][]) 
   return polylines;
 };
 
-const contourElevations = (minElevation: number, maxElevation: number, increment: number) => {
+const contourElevations = (minElevation: number, maxElevation: number, interval: number) => {
+  if (maxElevation >= Infinity) {
+    throw new Error("Contour elevations have to be finite numbers");
+  }
   const elevations: number[] = [];
-  const start = Math.ceil(minElevation * 2) / 2;
-  const end = Math.floor(maxElevation * 2) / 2;
-  for (let elevation = start; elevation <= end; elevation += increment) {
+  let elevation = Math.ceil(minElevation * interval) / interval;
+  while (elevation < maxElevation) {
     elevations.push(elevation);
+    elevation += interval;
   }
   return elevations;
 };
