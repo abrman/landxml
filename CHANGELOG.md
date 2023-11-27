@@ -1,5 +1,11 @@
 # landxml
 
+## 0.4.1
+
+### Patch Changes
+
+- 4edb0de: Contour elevations from surface min/max elevations and increment are now calculated correctly.
+
 ## 0.4.0
 
 ### Minor Changes
