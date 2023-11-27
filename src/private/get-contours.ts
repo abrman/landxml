@@ -77,15 +77,21 @@ const linesToPolyLines = (lineSegments: [[number, number], [number, number]][]) 
 };
 
 const contourElevations = (minElevation: number, maxElevation: number, interval: number) => {
-  if (maxElevation >= Infinity) {
+  if (!Number.isFinite(minElevation) || !Number.isFinite(maxElevation) || !Number.isFinite(interval)) {
     throw new Error("Contour elevations have to be finite numbers");
   }
+  if (minElevation + interval > maxElevation) {
+    throw new Error(`No contour lines at interval: ${interval} between elevation ${minElevation} and ${maxElevation}`);
+  }
+
   const elevations: number[] = [];
-  let elevation = Math.ceil(minElevation * interval) / interval;
+  let elevation = Math.ceil(minElevation / interval) * interval;
+
   while (elevation < maxElevation) {
     elevations.push(elevation);
     elevation += interval;
   }
+
   return elevations;
 };
 

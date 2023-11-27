@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import parseXML from "./private/parse-xml";
 import getGlb from "./private/get-glb";
-import getContours, { linesToPolyLines } from "./private/get-contours";
+import getContours, { linesToPolyLines, contourElevations } from "./private/get-contours";
 import toGeojsonContours from "./public/to-geojson-contours";
 import reprojectGeoJson from "./public/reproject-geojson";
 
@@ -218,6 +218,18 @@ describe("Parse LandXMLs", () => {
     const polylines = linesToPolyLines(lineSegments);
     expect(polylines.length).toBe(3);
     expect(polylines.map((v) => v.length).reduce((a, b) => a + b)).toBe(12);
+  });
+
+  it("Generate contour elevations", async () => {
+    const twoDecimalNumberString = (_: number) => _.toFixed(2);
+
+    expect(contourElevations(428.01171875, 446.187377929688, 2).map(twoDecimalNumberString)).toMatchObject(
+      [430, 432, 434, 436, 438, 440, 442, 444, 446].map(twoDecimalNumberString)
+    );
+
+    expect(contourElevations(0.301171875, 2.187377929688, 0.2).map(twoDecimalNumberString)).toMatchObject(
+      [0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2].map(twoDecimalNumberString)
+    );
   });
 
   // TODO: Fix test to reflect fixed polyline join function
