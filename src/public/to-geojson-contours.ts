@@ -1,7 +1,8 @@
 import { FeatureCollection, LineString } from "geojson";
 import filterBySurfaceId from "../private/filter-by-surfaceId";
 import parseXML from "../private/parse-xml";
-import getContours from "../private/get-contours";
+import getContours, { linesToPolyLines } from "../private/get-contours";
+import getOutline from "../private/get-outline";
 
 /**
  * @param landXmlString
@@ -18,6 +19,7 @@ import getContours from "../private/get-contours";
 const toGeojsonContours = async (
   landXmlString: string,
   contourInterval: number = 2,
+  generateOutline: boolean = true,
   surfaceId: string | number = -1
 ): Promise<
   {
@@ -48,6 +50,11 @@ const toGeojsonContours = async (
         }>(async (resolve, reject) => {
           try {
             const geojson = await getContours(surface, contourInterval);
+            if (generateOutline) {
+              const outlineGeojson = getOutline(surface);
+              console.log(outlineGeojson.features);
+              geojson.features = [...geojson.features, ...outlineGeojson.features];
+            }
 
             // DEBUG triangles
             // surface.surfaceDefinition.faces.forEach((face) => {
