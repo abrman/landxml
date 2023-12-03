@@ -7,10 +7,16 @@ const contourLineOnFace = (face: [x: number, y: number, z: number][], z: number)
     let vertex1 = face[i] as [x: number, y: number, z: number];
     let vertex2 = face[(i + 1) % face.length] as [x: number, y: number, z: number];
 
-    if ((vertex1[2] <= z && vertex2[2] >= z) || (vertex1[2] >= z && vertex2[2] <= z)) {
+    if (
+      ((vertex1[2] <= z && vertex2[2] >= z) || (vertex1[2] >= z && vertex2[2] <= z)) &&
+      !Number.isNaN((z - vertex1[2]) / (vertex2[2] - vertex1[2]))
+    ) {
       let t = (z - vertex1[2]) / (vertex2[2] - vertex1[2]);
       line.push([vertex1[0] + t * (vertex2[0] - vertex1[0]), vertex1[1] + t * (vertex2[1] - vertex1[1])]);
     }
+  }
+  if (line.length > 2) {
+    line = [...new Set(line.map((v) => JSON.stringify(v)))].map((s) => JSON.parse(s));
   }
   return line.length > 0 ? (line as [[x: number, z: number], [x: number, z: number]]) : undefined;
 };
@@ -72,7 +78,6 @@ const linesToPolyLines = (lineSegments: [[number, number], [number, number]][]) 
     }
     polylines.push(polyline.map((coord) => coord.split(",").map((v) => parseFloat(v)) as [number, number]));
   }
-
   return polylines;
 };
 
@@ -135,16 +140,19 @@ const getContours = async (data: ParsedSurface, interval: number = 2) => {
 
   const elevations = contourElevations(minElevation, maxElevation, interval);
 
-  const elevationPolylines = elevations.map((e) => ({
-    elevation: e,
-    polylines: linesToPolyLines(
-      triangles.reduce((prev, curr) => {
-        const line = contourLineOnFace(curr, e);
-        if (line) prev.push(line);
-        return prev;
-      }, [] as [[x: number, z: number], [x: number, z: number]][])
-    ),
-  }));
+  const elevationPolylines = elevations.map((e) => {
+    const linesAtElevationE = triangles.reduce((prev, curr) => {
+      const line = contourLineOnFace(curr, e);
+      if (line) prev.push(line);
+      return prev;
+    }, [] as [[x: number, z: number], [x: number, z: number]][]);
+
+    const polylinesAtElevationE = linesToPolyLines(linesAtElevationE);
+    return {
+      elevation: e,
+      polylines: polylinesAtElevationE,
+    };
+  });
 
   return constructGeojson(elevationPolylines);
 };
