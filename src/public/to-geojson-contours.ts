@@ -48,6 +48,24 @@ const toGeojsonContours = async (
         }>(async (resolve, reject) => {
           try {
             const geojson = await getContours(surface, contourInterval);
+
+            // DEBUG triangles
+            // surface.surfaceDefinition.faces.forEach((face) => {
+            //   (geojson.features as any).push({
+            //     type: "Feature",
+            //     geometry: {
+            //       type: "LineString",
+            //       properties: { face },
+            //       coordinates: [
+            //         surface.surfaceDefinition.points[face[0]],
+            //         surface.surfaceDefinition.points[face[1]],
+            //         surface.surfaceDefinition.points[face[2]],
+            //         surface.surfaceDefinition.points[face[0]],
+            //       ],
+            //     },
+            //   });
+            // });
+
             const { surfaceDefinition, ...rest } = surface;
             resolve({
               ...rest,
