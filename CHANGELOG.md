@@ -1,5 +1,16 @@
 # landxml
 
+## 0.5.0
+
+### Minor Changes
+
+- df95e64: Added ability to generate surface outline geojson
+
+### Patch Changes
+
+- df95e64: LandXML Face with with "i" attribute equal to "1" will now be correctly ignored
+- df95e64: Improved contour generation algorithm
+
 ## 0.4.2
 
 ### Patch Changes
