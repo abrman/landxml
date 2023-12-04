@@ -1,5 +1,11 @@
 # landxml
 
+## 0.5.1
+
+### Patch Changes
+
+- 2d30d02: Fix: Edge case generating contour lines that are shared between multiple faces
+
 ## 0.5.0
 
 ### Minor Changes
