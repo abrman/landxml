@@ -2,10 +2,12 @@ import type { Feature, FeatureCollection, LineString, Position } from "geojson";
 import type { ParsedSurface } from "./parse-xml";
 
 const contourLineOnFace = (face: [x: number, y: number, z: number][], z: number) => {
+  let vertsAtElevation = 0;
   let line: [x: number, z: number][] = [];
   for (let i = 0; i < face.length; i++) {
     let vertex1 = face[i] as [x: number, y: number, z: number];
     let vertex2 = face[(i + 1) % face.length] as [x: number, y: number, z: number];
+    if (vertex1[2] === z) vertsAtElevation++;
 
     if (
       ((vertex1[2] <= z && vertex2[2] >= z) || (vertex1[2] >= z && vertex2[2] <= z)) &&
@@ -15,6 +17,14 @@ const contourLineOnFace = (face: [x: number, y: number, z: number][], z: number)
       line.push([vertex1[0] + t * (vertex2[0] - vertex1[0]), vertex1[1] + t * (vertex2[1] - vertex1[1])]);
     }
   }
+
+  // If an edge is going to be detected by two triangles, prioritize the triangle with 3rd vertex at lower elevation
+  if (vertsAtElevation >= 2 && face.map((f) => f[2]).reduce((a, b) => a + b) > z * face.length) return undefined;
+
+  // Prevent zero length lines
+  if (line.length === 2 && (line[0] as any)[0] === (line[1] as any)[0] && (line[0] as any)[1] === (line[1] as any)[1])
+    return undefined;
+
   if (line.length > 2) {
     line = [...new Set(line.map((v) => JSON.stringify(v)))].map((s) => JSON.parse(s));
   }
@@ -148,6 +158,10 @@ const getContours = async (data: ParsedSurface, interval: number = 2) => {
     }, [] as [[x: number, z: number], [x: number, z: number]][]);
 
     const polylinesAtElevationE = linesToPolyLines(linesAtElevationE);
+    if (e === 442) {
+      console.log("linesAtElevationE", JSON.stringify(linesAtElevationE));
+      console.log("polylinesAtElevationE", JSON.stringify(polylinesAtElevationE));
+    }
     return {
       elevation: e,
       polylines: polylinesAtElevationE,
