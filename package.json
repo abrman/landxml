@@ -1,6 +1,6 @@
 {
   "name": "landxml",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Parse LandXML surfaces on the modern web.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
