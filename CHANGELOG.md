@@ -1,5 +1,11 @@
 # landxml
 
+## 0.5.2
+
+### Patch Changes
+
+- 6cafe85: Bugfix parsing landxml's without extra triangulated faces
+
 ## 0.5.1
 
 ### Patch Changes
