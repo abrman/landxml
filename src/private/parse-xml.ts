@@ -38,7 +38,7 @@ const parseXML = async (xmlString: string): Promise<ParsedSurface[]> => {
 
     faces = (surface.Definition.Faces.F as any[]).reduce((faceList, face: any) => {
       const { attr, content } = face;
-      if (attr.i === "1") return faceList;
+      if (attr?.i === "1") return faceList;
       const [a, b, c] = content.split(" ").map((v: string) => pointIdMap[v]);
       if ([a, b, c].filter((v) => typeof v === "undefined").length > 0) {
         throw `Invalid LandXML. A face is referencing a point that doesn't exist. Face is referencing points: ${content}`;
