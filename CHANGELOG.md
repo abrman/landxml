@@ -1,5 +1,11 @@
 # landxml
 
+## 0.6.1
+
+### Patch Changes
+
+- 6c547e2: deploy options fix
+
 ## 0.6.0
 
 ### Minor Changes
