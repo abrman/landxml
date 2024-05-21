@@ -1,5 +1,6 @@
 {
   "name": "landxml",
+  "type": "module",
   "version": "0.5.2",
   "description": "Parse LandXML surfaces on the modern web.",
   "main": "dist/index.js",
@@ -12,8 +13,8 @@
     "url": "https://github.com/abrman/landxml"
   },
   "scripts": {
-    "dev": "vitest",
-    "test": "vitest run",
+    "dev": "vitest --config ./vitest.config.ts --slow-test-threshold=0",
+    "test": "vitest --config ./vitest.config.ts run",
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "lint": "tsc",
     "ci": "npm run lint && npm run test && npm run build",
@@ -30,14 +31,20 @@
     "@changesets/cli": "^2.26.2",
     "@types/geojson": "^7946.0.13",
     "@types/proj4": "^2.5.5",
+    "@types/sax": "^1.2.7",
     "@types/xml2json": "^0.11.6",
+    "jsdom": "^24.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.2.2",
-    "vitest": "^0.34.6"
+    "vitest": "^1.6.0"
   },
   "dependencies": {
     "@gltf-transform/core": "^3.9.0",
+    "@vitest/web-worker": "^1.6.0",
+    "easy-web-worker": "^6.2.0",
     "proj4": "^2.9.2",
-    "xml-js": "^1.6.11"
+    "sax": "^1.3.0",
+    "xml-js": "^1.6.11",
+    "xml2json": "^0.12.0"
   }
 }

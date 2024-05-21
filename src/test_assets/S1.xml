@@ -1,0 +1,59 @@
+<LandXML xmlns="http://www.landxml.org/schema/LandXML-1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.landxml.org/schema/LandXML-1.2 http://www.landxml.org/schema/LandXML-1.2/LandXML-1.2.xsd" date="2024-05-10" time="10:27:12" version="1.2" language="English" readOnly="false">
+  <Units>
+    <Imperial areaUnit="squareFoot" linearUnit="USSurveyFoot" volumeUnit="cubicYard" temperatureUnit="fahrenheit" pressureUnit="inchHG" diameterUnit="inch" angularUnit="decimal degrees" directionUnit="decimal degrees" />
+  </Units>
+  <Project name="C:\FEI\Bridgeton\BT-191 (RDWP Design and Management)\BT-191 - 03217 - 90% Design\CAD\2 - WORKING\FEI\BLENDER 100% prep\BT-191_100%_DESIGN_001.blend" />
+  <Application name="Blender" desc="Feezor Engineering addon for Blender" manufacturer="Feezor Engineering" version="2023" timeStamp="2024-05-10T10:27:12" />
+  <Surfaces>
+    <Surface name="00 - BLENDED_TOPO (FIRMATEK_COOPER_WEAVER_2024-03-13).001" desc="Surface exported from blender on 2024-05-10 at 10:27:12">
+      <SourceData />
+      <Definition surfType="TIN">
+        <Pnts>
+          <P id="1">1068179.3388061523 835199.3388061523 472.7762145996094</P>
+          <P id="2">1067999.316772461 835560.0 460.199462890625</P>
+          <P id="3">1068179.3388061523 835920.6611938477 506.47222900390625</P>
+          <P id="4">1068540.0 835019.3167724609 476.0686340332031</P>
+          <P id="5">1068900.6611938477 835199.3388061523 465.0158996582031</P>
+          <P id="6">1068540.0 835560.0 526.0139770507812</P>
+          <P id="7">1069080.683227539 835560.0 457.6222839355469</P>
+          <P id="8">1068540.0 836100.6832275391 513.2378540039062</P>
+          <P id="9">1068900.6611938477 835920.6611938477 455.2962341308594</P>
+          <P id="10">1067829.003112793 834849.0031738281 481.8506164550781</P>
+          <P id="11">1067474.1130371094 835560.0 457.05718994140625</P>
+          <P id="12">1067829.003112793 836270.996887207 455.22369384765625</P>
+          <P id="13">1068540.0 834494.1130371094 488.3411865234375</P>
+          <P id="14">1069250.9968261719 834849.0031738281 466.5521545410156</P>
+          <P id="15">1069605.8869628906 835560.0 451.9765930175781</P>
+          <P id="16">1068540.0 836625.8869628906 459.08233642578125</P>
+          <P id="17">1069250.9968261719 836270.996887207 447.39111328125</P>
+        </Pnts>
+        <Faces>
+          <F>4 1 6</F>
+          <F>9 7 6</F>
+          <F>5 4 6</F>
+          <F>7 5 6</F>
+          <F>8 9 6</F>
+          <F>8 6 3</F>
+          <F>3 6 2</F>
+          <F>1 2 6</F>
+          <F>4 14 13</F>
+          <F>8 17 9</F>
+          <F>2 10 11</F>
+          <F>7 14 5</F>
+          <F>8 12 16</F>
+          <F>2 12 3</F>
+          <F>4 10 1</F>
+          <F>7 17 15</F>
+          <F>4 5 14</F>
+          <F>8 16 17</F>
+          <F>2 1 10</F>
+          <F>7 15 14</F>
+          <F>8 3 12</F>
+          <F>2 11 12</F>
+          <F>4 13 10</F>
+          <F>7 9 17</F>
+        </Faces>
+      </Definition>
+    </Surface>
+  </Surfaces>
+</LandXML>

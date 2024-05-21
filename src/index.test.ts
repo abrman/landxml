@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import parseXML from "./private/parse-xml";
 import getGlb from "./private/get-glb";
 import getContours, { linesToPolyLines, contourElevations, contourLineOnFace } from "./private/get-contours";
 import toGeojsonContours from "./public/to-geojson-contours";
 import reprojectGeoJson from "./public/reproject-geojson";
+import fs from "fs";
 
 const example_single_surface_landxml_with_sourcedata_breakline = `<?xml version="1.0"?>
 <LandXML xmlns="http://www.landxml.org/schema/LandXML-1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.landxml.org/schema/LandXML-1.2 http://www.landxml.org/schema/LandXML-1.2/LandXML-1.2.xsd" date="2023-11-20" time="12:40:44" version="1.2" language="English" readOnly="false">
@@ -231,4 +232,20 @@ describe("Parse LandXMLs", () => {
       [0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2].map(twoDecimalNumberString)
     );
   });
+
+  it("Large file test", async () => {
+    const n = 5; // size of the landXML to process
+    const landXmlString = fs.readFileSync(`./src/test_assets/S${n}.xml`, { encoding: "utf-8" });
+    let rawContours = await toGeojsonContours(landXmlString, 1);
+    const projection =
+      "+proj=utm +zone=16 +ellps=GRS80 +towgs84=-0.9738,1.9453,0.5486,-1.3357e-07,-4.872e-08,-5.507e-08,0 +units=m +no_defs +type=crs"; // any
+
+    if (rawContours[0]) {
+      const geojson = reprojectGeoJson(rawContours[0].geojson, projection, "WGS84", true);
+      // fs.writeFileSync(`./src/test_assets/S${n}_result.json`, JSON.stringify(geojson));
+    }
+  });
+  {
+    timeout: -1;
+  }
 });

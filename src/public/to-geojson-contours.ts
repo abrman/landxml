@@ -52,7 +52,7 @@ const toGeojsonContours = async (
             const geojson = await getContours(surface, contourInterval);
             if (generateOutline) {
               const outlineGeojson = getOutline(surface);
-              console.log(outlineGeojson.features);
+              // console.log(outlineGeojson.features);
               geojson.features = [...geojson.features, ...outlineGeojson.features];
             }
 
