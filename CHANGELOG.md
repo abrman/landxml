@@ -1,5 +1,11 @@
 # landxml
 
+## 0.6.0
+
+### Minor Changes
+
+- 330e3e8: Introduced web workers for some of the processing heavy workflows
+
 ## 0.5.2
 
 ### Patch Changes
