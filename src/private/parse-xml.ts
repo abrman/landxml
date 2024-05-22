@@ -10,39 +10,72 @@ export type ParsedSurface = {
   surfaceDefinition: {
     points: [x: number, y: number, z: number][];
     faces: [vertIndexA: number, vertIndexB: number, vertIndexC: number][];
+    faceNeighbors: [faceIndex: number, faceIndex: number, faceIndex: number][];
   };
 };
 
 const surfaceDefWorker = createEasyWebWorker<
-  {
-    isPoint: boolean;
-    arr: SurfacePoint[] | SurfaceFace[];
-    idMap?: string[];
-  },
-  [vertIndex: number, vertIndex: number, vertIndex: number][] | [id: string, [x: number, y: number, z: number]][]
+  | {
+      task: "parse-surface-points";
+      points: SurfacePoint[];
+    }
+  | {
+      task: "parse-surface-faces";
+      faces: SurfaceFace[];
+      idMap?: string[];
+    }
+  | {
+      task: "find-neighboring-faces";
+      faces: [vertIndex: number, vertIndex: number, vertIndex: number][];
+      range: { start: number; end: number };
+    },
+  | [id: string, [x: number, y: number, z: number]][]
+  | [vertIndex: number, vertIndex: number, vertIndex: number][]
+  | [faceIndex: number, faceIndex: number, faceIndex: number][]
 >(
   ({ onMessage }) => {
     onMessage((message) => {
-      const { isPoint, arr, idMap } = message.payload;
-      if (isPoint) {
-        message.resolve(
-          (arr as SurfacePoint[])
-            .map((pt) => [pt.attr.id, pt.content.split(" ").map(Number) as [number, number, number]] as const)
-            .map((v) => [v[0] as string, [v[1][1], v[1][0], v[1][2]] as [number, number, number]])
-        );
-      } else {
-        message.resolve(
-          (arr as SurfaceFace[]).flatMap((f) => {
-            if (typeof f === "string")
-              return [f.split(" ").map((id) => idMap?.indexOf(id)) as [number, number, number]];
-            if (f?.attr?.i === "1") return [];
-            return [f.content.split(" ").map((id) => idMap?.indexOf(id)) as [number, number, number]];
-          })
-        );
+      try {
+        const { task } = message.payload;
+        if (task === "parse-surface-points") {
+          const { points } = message.payload;
+          message.resolve(
+            points
+              .map((pt) => [pt.attr.id, pt.content.split(" ").map(Number) as [number, number, number]] as const)
+              .map((v) => [v[0] as string, [v[1][1], v[1][0], v[1][2]] as [number, number, number]])
+          );
+        } else if (task === "parse-surface-faces") {
+          const { faces, idMap } = message.payload;
+          message.resolve(
+            faces.flatMap((f) => {
+              if (typeof f === "string")
+                return [f.split(" ").map((id) => idMap?.indexOf(id)) as [number, number, number]];
+              if (f?.attr?.i === "1") return [];
+              return [f.content.split(" ").map((id) => idMap?.indexOf(id)) as [number, number, number]];
+            })
+          );
+        } else if (task === "find-neighboring-faces") {
+          //prettier-ignore
+          const { faces, range: {start, end} } = message.payload;
+          const faceNeighbors: [faceIndex: number, faceIndex: number, faceIndex: number][] = [];
+          for (let i = start; i < end; i++) {
+            const sourceFace = faces[i] as [vertIndex: number, vertIndex: number, vertIndex: number];
+            // prettier-ignore
+            const neighborA = faces.findIndex((f,j) => f.findIndex((v) => v === sourceFace[0]) >= 0 && f.findIndex((v) => v === sourceFace[1]) >= 0 && j !== i);
+            // prettier-ignore
+            const neighborB = faces.findIndex((f,j) => f.findIndex((v) => v === sourceFace[1]) >= 0 && f.findIndex((v) => v === sourceFace[2]) >= 0 && j !== i);
+            // prettier-ignore
+            const neighborC = faces.findIndex((f,j) => f.findIndex((v) => v === sourceFace[0]) >= 0 && f.findIndex((v) => v === sourceFace[2]) >= 0 && j !== i);
+            faceNeighbors.push([neighborA, neighborB, neighborC]);
+          }
+          message.resolve(faceNeighbors);
+        }
+      } catch (e) {
+        message.reject(e);
       }
     });
   },
-  { maxWorkers: 10 }
+  { maxWorkers: 16 }
 );
 
 const parseXML = async (xmlString: string): Promise<ParsedSurface[]> =>
@@ -75,6 +108,7 @@ const parseXML = async (xmlString: string): Promise<ParsedSurface[]> =>
 
           let ptsIdArray: [id: string, [x: number, y: number, z: number]][] = [];
           let faces: [vertIndex: number, vertIndex: number, vertIndex: number][] = [];
+          let faceNeighbors: [faceIndex: number, faceIndex: number, faceIndex: number][] = [];
           if (Pnts.length > 10000) {
             const sliceIndexes = [...Array(20).keys()].map((i) => Math.round((Pnts.length / 20) * i));
             ptsIdArray = (
@@ -83,8 +117,8 @@ const parseXML = async (xmlString: string): Promise<ParsedSurface[]> =>
                   (v, i, a) =>
                     new Promise(async (resolve, reject) => {
                       const pts = await surfaceDefWorker.send({
-                        isPoint: true,
-                        arr: Pnts.slice(a[i] as number, a[i + 1] || Pnts.length),
+                        task: "parse-surface-points",
+                        points: Pnts.slice(a[i] as number, a[i + 1] || Pnts.length),
                       });
                       resolve(pts);
                     })
@@ -92,7 +126,7 @@ const parseXML = async (xmlString: string): Promise<ParsedSurface[]> =>
               )) as [id: string, [x: number, y: number, z: number]][][]
             ).reduce((prev, curr) => [...prev, ...curr], []);
           } else {
-            ptsIdArray = (await surfaceDefWorker.send({ arr: Pnts, isPoint: true })) as [
+            ptsIdArray = (await surfaceDefWorker.send({ task: "parse-surface-points", points: Pnts })) as [
               id: string,
               [x: number, y: number, z: number]
             ][];
@@ -108,8 +142,8 @@ const parseXML = async (xmlString: string): Promise<ParsedSurface[]> =>
                   (v, i, a) =>
                     new Promise(async (resolve, reject) => {
                       const fcs = await surfaceDefWorker.send({
-                        isPoint: false,
-                        arr: Faces.slice(a[i] as number, a[i + 1] || Faces.length),
+                        task: "parse-surface-faces",
+                        faces: Faces.slice(a[i] as number, a[i + 1] || Faces.length),
                         idMap: pointsIdMap,
                       });
                       resolve(fcs);
@@ -118,11 +152,42 @@ const parseXML = async (xmlString: string): Promise<ParsedSurface[]> =>
               )) as [number, number, number][][]
             ).reduce((prev, curr) => [...prev, ...curr], [] as [number, number, number][]);
           } else {
-            faces = (await surfaceDefWorker.send({ arr: Faces, isPoint: false, idMap: pointsIdMap })) as [
-              number,
-              number,
-              number
-            ][];
+            faces = (await surfaceDefWorker.send({
+              task: "parse-surface-faces",
+              faces: Faces,
+              idMap: pointsIdMap,
+            })) as [number, number, number][];
+          }
+
+          if (Faces.length > 10000) {
+            const sliceIndexes = [...Array(20).keys()].map((i) => Math.round((Faces.length / 20) * i));
+            faceNeighbors = (
+              (await Promise.all(
+                sliceIndexes.map(
+                  (v, i, a) =>
+                    new Promise(async (resolve, reject) => {
+                      const fcs = await surfaceDefWorker.send({
+                        task: "find-neighboring-faces",
+                        faces,
+                        range: {
+                          start: a[i] as number,
+                          end: a[i + 1] || faces.length,
+                        },
+                      });
+                      resolve(fcs);
+                    })
+                )
+              )) as [number, number, number][][]
+            ).reduce((prev, curr) => [...prev, ...curr], [] as [number, number, number][]);
+          } else {
+            faceNeighbors = (await surfaceDefWorker.send({
+              task: "find-neighboring-faces",
+              faces,
+              range: {
+                start: 0,
+                end: faces.length,
+              },
+            })) as [number, number, number][];
           }
 
           resolve({
@@ -134,6 +199,7 @@ const parseXML = async (xmlString: string): Promise<ParsedSurface[]> =>
             surfaceDefinition: {
               points,
               faces,
+              faceNeighbors,
             },
           } as ParsedSurface);
         })

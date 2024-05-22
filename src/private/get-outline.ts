@@ -2,39 +2,23 @@ import { linesToPolyLines, constructGeojson } from "./get-contours";
 import { ParsedSurface } from "./parse-xml";
 
 const getOutline = (surface: ParsedSurface) => {
-  const triangleVertexIdEdgePairs: string[] = [];
-  let i: number = -1;
-  let pairs: string[] = [];
-  surface.surfaceDefinition.faces.forEach((f) => {
-    pairs = [];
-    (
-      [
-        [f[0], f[1]],
-        [f[1], f[2]],
-        [f[2], f[0]],
-      ] as [number, number][]
-    ).forEach(([a, b]) => {
-      if (a < b) {
-        pairs.push(`${a};${b}`);
-      } else {
-        pairs.push(`${b};${a}`);
-      }
-    });
-    pairs.forEach((pair) => {
-      i = triangleVertexIdEdgePairs.indexOf(pair);
-      if (i >= 0) {
-        triangleVertexIdEdgePairs.splice(i, 1);
-      } else {
-        triangleVertexIdEdgePairs.push(pair);
-      }
-    });
+  const vertexIndexPairEdges: [number, number][] = [];
+  surface.surfaceDefinition.faces.forEach((f, i) => {
+    const neighbors = surface.surfaceDefinition.faceNeighbors[i] as [
+      faceIndex: number,
+      faceIndex: number,
+      faceIndex: number
+    ];
+    if (neighbors[0] === -1) vertexIndexPairEdges.push([f[0], f[1]]);
+    if (neighbors[1] === -1) vertexIndexPairEdges.push([f[1], f[2]]);
+    if (neighbors[2] === -1) vertexIndexPairEdges.push([f[0], f[2]]);
   });
+
   const edges: [[number, number], [number, number]][] = [];
-  triangleVertexIdEdgePairs.map((pair) => {
-    const [v1, v2] = pair
-      .split(";")
-      .map((v) => surface.surfaceDefinition.points[parseInt(v, 10)]?.slice(0, 2) as [number, number]);
-    if (v1 && v2) edges.push([v1, v2]);
+  vertexIndexPairEdges.map((pair) => {
+    const [v1, v2] = pair.map((vertexIndex) => surface.surfaceDefinition.points[vertexIndex]);
+    if (typeof v1 !== "undefined" && typeof v2 !== "undefined")
+      edges.push([v1.slice(0, 2) as [number, number], v2.slice(0, 2) as [number, number]]);
   });
   return constructGeojson([{ elevation: 0, polylines: linesToPolyLines(edges) }]);
 };
