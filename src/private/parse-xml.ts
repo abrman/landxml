@@ -160,7 +160,7 @@ const parseXML = async (xmlString: string): Promise<ParsedSurface[]> =>
           }
 
           if (Faces.length > 10000) {
-            const sliceIndexes = [...Array(20).keys()].map((i) => Math.round((Faces.length / 20) * i));
+            const sliceIndexes = [...Array(20).keys()].map((i) => Math.round(((faces.length - 1) / 20) * i));
             faceNeighbors = (
               (await Promise.all(
                 sliceIndexes.map(
@@ -185,7 +185,7 @@ const parseXML = async (xmlString: string): Promise<ParsedSurface[]> =>
               faces,
               range: {
                 start: 0,
-                end: faces.length,
+                end: faces.length - 1,
               },
             })) as [number, number, number][];
           }

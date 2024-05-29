@@ -5,8 +5,16 @@ import EasyWebWorker, { createEasyWebWorker } from "easy-web-worker";
 const fakeCreateEasyWebWorker = (callback: (onMessage: any) => void) => ({
   send: (payload: any) =>
     new Promise(async (resolve, reject) => {
-      const onMessage = (callback: ({ payload, resolve }: { payload: any; resolve: any }) => void) => {
-        callback({ payload, resolve });
+      const onMessage = (
+        callback: ({ payload, resolve }: { payload: any; resolve: any; reject: (error: string) => void }) => void
+      ) => {
+        callback({
+          payload,
+          resolve,
+          reject: (e: any) => {
+            console.error(e);
+          },
+        });
       };
       callback({ onMessage });
     }),
