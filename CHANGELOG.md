@@ -1,5 +1,11 @@
 # landxml
 
+## 0.6.4
+
+### Patch Changes
+
+- 2fcb339: Bugfix: Parsing small Landxmls via web workers
+
 ## 0.6.3
 
 ### Patch Changes
