@@ -185,7 +185,7 @@ const parseXML = async (xmlString: string): Promise<ParsedSurface[]> =>
               faces,
               range: {
                 start: 0,
-                end: faces.length - 1,
+                end: faces.length,
               },
             })) as [number, number, number][];
           }
