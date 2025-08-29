@@ -1,5 +1,12 @@
 # landxml
 
+## 0.6.6
+
+### Patch Changes
+
+- 33f80a2: Removed unused `xml2json` dependency
+- 33f80a2: Bumped version
+
 ## 0.6.4
 
 ### Patch Changes
