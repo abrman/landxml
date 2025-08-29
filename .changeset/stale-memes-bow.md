@@ -1,0 +1,5 @@
+---
+"landxml": patch
+---
+
+Bumped version

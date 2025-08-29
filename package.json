@@ -1,6 +1,6 @@
 {
   "name": "landxml",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "description": "Parse LandXML surfaces on the modern web.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -9,7 +9,7 @@
   "homepage": "https://github.com/abrman/landxml#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/abrman/landxml"
+    "url": "git+https://github.com/abrman/landxml.git"
   },
   "scripts": {
     "dev": "vitest --config ./vitest.config.ts --slow-test-threshold=0",
@@ -27,23 +27,22 @@
   "author": "Matthew Abrman",
   "license": "MIT",
   "devDependencies": {
-    "@changesets/cli": "^2.26.2",
-    "@types/geojson": "^7946.0.13",
-    "@types/proj4": "^2.5.5",
+    "@changesets/cli": "^2.29.6",
+    "@types/geojson": "^7946.0.16",
+    "@types/proj4": "^2.5.6",
     "@types/sax": "^1.2.7",
     "@types/xml2json": "^0.11.6",
     "jsdom": "^24.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.2.2",
-    "vitest": "^1.6.0"
+    "vitest": "^3.2.4"
   },
   "dependencies": {
     "@gltf-transform/core": "^3.9.0",
-    "@vitest/web-worker": "^1.6.0",
+    "@vitest/web-worker": "^3.2.4",
     "easy-web-worker": "^6.2.0",
     "proj4": "^2.9.2",
-    "sax": "^1.3.0",
-    "xml-js": "^1.6.11",
-    "xml2json": "^0.12.0"
+    "sax": "^1.4.1",
+    "xml-js": "^1.6.11"
   }
 }
