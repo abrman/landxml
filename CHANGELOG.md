@@ -1,5 +1,13 @@
 # landxml
 
+## 0.7.1
+
+### Patch Changes
+
+- b200147: Updated publish workflow
+- eec1ceb: Struggling with CI/CD #2
+- b80d579: Struggling with CI/CD #1
+
 ## 0.7.0
 
 ### Minor Changes
