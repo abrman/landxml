@@ -1,5 +1,11 @@
 # landxml
 
+## 0.7.0
+
+### Minor Changes
+
+- 23cc669: Ai performance optimizations
+
 ## 0.6.6
 
 ### Patch Changes
