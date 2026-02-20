@@ -1,7 +1,7 @@
 import { Document, WebIO } from "@gltf-transform/core";
 import type { ParsedSurface } from "./parse-xml";
 
-const findXYAxisMedians = (vertices: [number, number, number][]) => {
+export const findXYAxisMedians = (vertices: [number, number, number][]) => {
   vertices = vertices.slice().filter(Boolean);
   const middleIndex = Math.floor(vertices.length / 2);
   const medianX = vertices.slice().sort((a, b) => a[0] - b[0])[middleIndex]?.[0];

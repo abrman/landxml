@@ -19,8 +19,6 @@ Easily transform LandXML surfaces into GeoJSON contours or GLB 3D models for use
 npm install landxml
 ```
 
----
-
 ## Examples
 
 ### Get contours and a GLB model together (recommended)
@@ -36,7 +34,7 @@ const surfaces = await toGlbAndContours(
   landXmlString,
   2, // contour interval (LandXML units)
   true, // generate outline
-  "auto", // GLB centre: "auto" | "origin" | [x, y]
+  "auto", // GLB center: "auto" | "origin" | [x, y]
 );
 
 const { glb, center, geojson, wktString, download } = surfaces[0];
@@ -59,7 +57,7 @@ const landXmlString = `<?xml version="1.0"?>...<LandXML>...</LandXML>`;
 
 const surfaces = await toGeojsonContours(
   landXmlString,
-  2, // contour interval (metres)
+  2, // contour interval (LandXML units)
   true, // include surface outline as a z=0 feature
 );
 
@@ -186,3 +184,13 @@ Returns `Promise<{ name, description, sourceFile, timeStamp, glb, center, downlo
 | `keepOriginalGeometry` | `boolean`           | `true`    | Store original coordinates under `feature.properties._rawGeometry` |
 
 Returns the mutated `FeatureCollection` with updated coordinates.
+
+---
+
+## Multi-surface center behaviour
+
+When a LandXML file contains multiple surfaces and `center` is set to `"auto"` (the default), the package computes a **single shared median center** across all surfaces' points. Every GLB produced in that call is offset by the same origin, so the surfaces remain correctly positioned relative to each other in your 3D scene. This happens automatically — no extra configuration is needed.
+
+If you need each surface to be individually centered (e.g. you are processing them in isolation), pass an explicit `[x, y]` pair instead.
+
+---

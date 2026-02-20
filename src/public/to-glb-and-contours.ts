@@ -2,7 +2,7 @@ import { FeatureCollection, LineString } from "geojson";
 import filterBySurfaceId from "../private/filter-by-surfaceId";
 import parseXML, { ParsedSurface } from "../private/parse-xml";
 import getContours, { precomputeSurfaceData } from "../private/get-contours";
-import getGlb from "../private/get-glb";
+import getGlb, { findXYAxisMedians } from "../private/get-glb";
 import getOutline from "../private/get-outline";
 import downloadGlb from "../private/download-glb";
 
@@ -14,7 +14,7 @@ export type GlbAndContoursResult = {
   wktString?: string;
   /** Binary GLB data */
   glb: Uint8Array;
-  /** XY center used to offset the GLB model from origin */
+  /** Shared XY center used to offset all GLB models from origin */
   center: [x: number, y: number];
   /** Convenience download trigger (browser only) */
   download: () => void;
@@ -30,12 +30,16 @@ export type GlbAndContoursResult = {
  * Use this instead of calling `toGlb` + `toGeojsonContours` separately when
  * you need both outputs, as it eliminates all redundant work.
  *
+ * When processing multiple surfaces with `center: "auto"`, a **single shared
+ * center** is computed from all surfaces combined, so every GLB is offset by
+ * the same origin and surfaces remain correctly positioned relative to each other.
+ *
  * @param landXmlString   Raw LandXML string
  * @param contourInterval Vertical interval between contour lines (default 2)
  * @param generateOutline When true, the outline of each surface is appended to
  *                        the GeoJSON as a z=0 feature (default true)
- * @param center          GLB origin strategy: "auto" (median XY), "origin" ([0,0]),
- *                        or an explicit [x, y] pair (default "auto")
+ * @param center          GLB origin strategy: "auto" (combined median XY of all surfaces),
+ *                        "origin" ([0,0]), or an explicit [x, y] pair (default "auto")
  * @param surfaceId       Surface name or 0-based index to process a single
  *                        surface; -1 processes all surfaces (default -1)
  */
@@ -46,9 +50,20 @@ const toGlbAndContours = async (
   center: "auto" | "origin" | [x: number, y: number] = "auto",
   surfaceId: string | number = -1,
 ): Promise<GlbAndContoursResult[]> => {
-  const requestedCenter = center === "origin" ? ([0, 0] as [number, number]) : center === "auto" ? undefined : center;
-
   const requestedParsedSurfaces = filterBySurfaceId(await parseXML(landXmlString), surfaceId);
+
+  // Resolve the shared center once for all surfaces so that multi-surface
+  // LandXMLs remain correctly positioned relative to each other.
+  let resolvedCenter: [x: number, y: number];
+  if (center === "origin") {
+    resolvedCenter = [0, 0];
+  } else if (center === "auto") {
+    // Combine all points from every surface to compute one shared median center.
+    const allPoints = requestedParsedSurfaces.flatMap((s) => s.surfaceDefinition.points);
+    resolvedCenter = findXYAxisMedians(allPoints);
+  } else {
+    resolvedCenter = center;
+  }
 
   const results = await Promise.all(
     requestedParsedSurfaces.map(async (surface): Promise<GlbAndContoursResult> => {
@@ -58,8 +73,8 @@ const toGlbAndContours = async (
 
       // Run GLB generation and contour generation concurrently — they are
       // independent once the precomputed data is available.
-      const [{ glb, center: resolvedCenter }, geojson] = await Promise.all([
-        getGlb(surface, requestedCenter),
+      const [{ glb }, geojson] = await Promise.all([
+        getGlb(surface, resolvedCenter),
         getContours(surface, contourInterval, precomputed),
       ]);
 
