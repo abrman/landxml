@@ -1,5 +1,11 @@
 # landxml
 
+## 0.8.0
+
+### Minor Changes
+
+- 6a4a531: Modified "auto" behavior on LandXML files with multiple surfaces to create a combined center (rather than each surface its own cetner)
+
 ## 0.7.1
 
 ### Patch Changes
