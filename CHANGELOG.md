@@ -1,5 +1,11 @@
 # landxml
 
+## 0.8.1
+
+### Patch Changes
+
+- e886c37: Return empty geojson and console.warn rather than throwing error when generating contours.
+
 ## 0.8.0
 
 ### Minor Changes
