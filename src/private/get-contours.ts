@@ -200,7 +200,9 @@ export const contourElevations = (minElevation: number, maxElevation: number, in
     throw new Error("Contour elevations have to be finite numbers");
   }
   if (minElevation + interval > maxElevation) {
-    throw new Error(`No contour lines at interval: ${interval} between elevation ${minElevation} and ${maxElevation}`);
+    // throw new Error(`No contour lines at interval: ${interval} between elevation ${minElevation} and ${maxElevation}`);
+    console.warn(`No contour lines at interval: ${interval} between elevation ${minElevation} and ${maxElevation}`);
+    return [];
   }
   const elevations: number[] = [];
   // OPTIMIZATION: use integer step counting to avoid float accumulation drift.
@@ -310,6 +312,7 @@ const getContours = async (
   const { triangles, minElevation, maxElevation } = precomputed ?? precomputeSurfaceData(data);
 
   const elevations = contourElevations(minElevation, maxElevation, interval);
+  if (elevations.length === 0) return constructGeojson([]);
   const trianglesByElevation = bucketTrianglesByElevation(triangles, elevations, interval);
 
   const elevationPolylines = await Promise.all(
