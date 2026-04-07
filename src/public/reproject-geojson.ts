@@ -1,9 +1,16 @@
 import { FeatureCollection } from "geojson";
 import proj from "mproj";
 
-// mproj does not resolve named projections — expand known aliases to proj4 strings
+// mproj only accepts proj4 strings — resolve named aliases and convert WKT as needed
 const NAMED_PROJECTIONS: Record<string, string> = {
   WGS84: "+proj=longlat +datum=WGS84 +no_defs",
+};
+
+const toProj4String = (projection: string): string => {
+  if (NAMED_PROJECTIONS[projection]) return NAMED_PROJECTIONS[projection]!;
+  if (/^(PROJCS|GEOGCS|COMPD_CS|GEOCCS|VERT_CS|LOCAL_CS)\s*\[/i.test(projection.trim()))
+    return proj.internal.wkt_to_proj4(projection);
+  return projection;
 };
 
 /**
@@ -17,19 +24,15 @@ const reprojectGeoJson = (
   geojson: FeatureCollection,
   sourceProjection: string,
   targetProjection: string = "WGS84",
-  keepOriginalGeometryAsFeatureProperty: boolean = true
+  keepOriginalGeometryAsFeatureProperty: boolean = true,
 ) => {
   const transformCoordinates = (coordinates: any[], sourceProjection: string, targetProjection: string) => {
     if (Array.isArray(coordinates[0])) {
       coordinates = coordinates.map((subCoordinates) =>
-        transformCoordinates(subCoordinates, sourceProjection, targetProjection)
+        transformCoordinates(subCoordinates, sourceProjection, targetProjection),
       );
     } else {
-      coordinates = proj(
-        NAMED_PROJECTIONS[sourceProjection] ?? sourceProjection,
-        NAMED_PROJECTIONS[targetProjection] ?? targetProjection,
-        coordinates
-      );
+      coordinates = proj(toProj4String(sourceProjection), toProj4String(targetProjection), coordinates);
     }
     return coordinates;
   };
@@ -49,7 +52,7 @@ const reprojectGeoJson = (
         (feature.geometry as any).coordinates = transformCoordinates(
           (feature.geometry as any).coordinates,
           sourceProjection,
-          targetProjection
+          targetProjection,
         );
       }
     }
