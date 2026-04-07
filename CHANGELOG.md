@@ -1,5 +1,11 @@
 # landxml
 
+## 0.9.1
+
+### Patch Changes
+
+- e2122a2: Bugfix: WKT string not working with mproj update
+
 ## 0.9.0
 
 ### Minor Changes
