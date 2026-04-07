@@ -1,5 +1,10 @@
 import { FeatureCollection } from "geojson";
-import proj4 from "proj4";
+import proj from "mproj";
+
+// mproj does not resolve named projections — expand known aliases to proj4 strings
+const NAMED_PROJECTIONS: Record<string, string> = {
+  WGS84: "+proj=longlat +datum=WGS84 +no_defs",
+};
 
 /**
  * @param geojson
@@ -20,7 +25,11 @@ const reprojectGeoJson = (
         transformCoordinates(subCoordinates, sourceProjection, targetProjection)
       );
     } else {
-      coordinates = proj4(sourceProjection, targetProjection, coordinates);
+      coordinates = proj(
+        NAMED_PROJECTIONS[sourceProjection] ?? sourceProjection,
+        NAMED_PROJECTIONS[targetProjection] ?? targetProjection,
+        coordinates
+      );
     }
     return coordinates;
   };

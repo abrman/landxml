@@ -9,7 +9,7 @@ Easily transform LandXML surfaces into GeoJSON contours or GLB 3D models for use
 - **`toGlbAndContours`** — Generate both a GLB model and GeoJSON contours in a single pass (fastest when you need both outputs).
 - **`toGlb`** — Generate a GLB 3D model from LandXML surfaces.
 - **`toGeojsonContours`** — Convert LandXML surfaces into contour line GeoJSON.
-- **`reprojectGeoJson`** — Reproject GeoJSON coordinates to any projection using `proj4`.
+- **`reprojectGeoJson`** — Reproject GeoJSON coordinates to any projection using `mproj`.
 
 ---
 
@@ -117,7 +117,7 @@ const byIndex = await toGeojsonContours(landXmlString, 2, true, 1);
 
 ### Reproject GeoJSON
 
-`reprojectGeoJson` wraps `proj4` and works with both WKT strings (exported by Civil 3D when a drawing is geo-referenced) and standard proj4 definition strings.
+`reprojectGeoJson` wraps `mproj` and works with both WKT strings (exported by Civil 3D when a drawing is geo-referenced) and standard proj4 definition strings.
 
 ```typescript
 import { reprojectGeoJson } from "landxml";
