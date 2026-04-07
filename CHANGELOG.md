@@ -1,5 +1,11 @@
 # landxml
 
+## 0.9.0
+
+### Minor Changes
+
+- 604418b: Replaced proj4 dependency with mproj, which has more accurate transformation results.
+
 ## 0.8.1
 
 ### Patch Changes
