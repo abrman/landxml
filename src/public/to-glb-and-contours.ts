@@ -1,10 +1,6 @@
 import { FeatureCollection, LineString } from "geojson";
-import filterBySurfaceId from "../private/filter-by-surfaceId";
-import parseXML, { ParsedSurface } from "../private/parse-xml";
-import getContours, { precomputeSurfaceData } from "../private/get-contours";
-import getGlb, { findXYAxisMedians } from "../private/get-glb";
-import getOutline from "../private/get-outline";
 import downloadGlb from "../private/download-glb";
+import { findCenter, parseSurfaces, surfaceInfo, surfaceToContours, surfaceToGlb, type GlbCenter } from "./surfaces";
 
 export type GlbAndContoursResult = {
   name: string;
@@ -12,6 +8,8 @@ export type GlbAndContoursResult = {
   sourceFile: string;
   timeStamp: string;
   wktString?: string;
+  /** Linear unit declared in the LandXML's `<Units>` (e.g. "USSurveyFoot", "meter") */
+  linearUnit?: string;
   /** Binary GLB data */
   glb: Uint8Array;
   /** Shared XY center used to offset all GLB models from origin */
@@ -24,8 +22,7 @@ export type GlbAndContoursResult = {
 
 /**
  * Converts a LandXML string into **both** a GLB 3-D model and GeoJSON contour
- * lines in a single pass — the XML is parsed once and the triangle/elevation
- * data computed once and shared between both outputs.
+ * lines in a single pass — the XML is parsed once and shared between both outputs.
  *
  * Use this instead of calling `toGlb` + `toGeojsonContours` separately when
  * you need both outputs, as it eliminates all redundant work.
@@ -47,57 +44,28 @@ const toGlbAndContours = async (
   landXmlString: string,
   contourInterval: number = 2,
   generateOutline: boolean = true,
-  center: "auto" | "origin" | [x: number, y: number] = "auto",
+  center: GlbCenter = "auto",
   surfaceId: string | number = -1,
 ): Promise<GlbAndContoursResult[]> => {
-  const requestedParsedSurfaces = filterBySurfaceId(await parseXML(landXmlString), surfaceId);
+  const surfaces = await parseSurfaces(landXmlString, { surfaceId });
+  const resolvedCenter = findCenter(surfaces, center);
 
-  // Resolve the shared center once for all surfaces so that multi-surface
-  // LandXMLs remain correctly positioned relative to each other.
-  let resolvedCenter: [x: number, y: number];
-  if (center === "origin") {
-    resolvedCenter = [0, 0];
-  } else if (center === "auto") {
-    // Combine all points from every surface to compute one shared median center.
-    const allPoints = requestedParsedSurfaces.flatMap((s) => s.surfaceDefinition.points);
-    resolvedCenter = findXYAxisMedians(allPoints);
-  } else {
-    resolvedCenter = center;
-  }
-
-  const results = await Promise.all(
-    requestedParsedSurfaces.map(async (surface): Promise<GlbAndContoursResult> => {
-      // OPTIMIZATION: precompute triangles + elevation range once; both
-      // getContours() and getGlb() reuse this data without re-traversing faces/points.
-      const precomputed = precomputeSurfaceData(surface);
-
-      // Run GLB generation and contour generation concurrently — they are
-      // independent once the precomputed data is available.
-      const [{ glb }, geojson] = await Promise.all([
-        getGlb(surface, resolvedCenter),
-        getContours(surface, contourInterval, precomputed),
+  return Promise.all(
+    surfaces.map(async (surface): Promise<GlbAndContoursResult> => {
+      // GLB and contours are independent once parsed — build them concurrently.
+      const [glb, geojson] = await Promise.all([
+        surfaceToGlb(surface, resolvedCenter),
+        surfaceToContours(surface, contourInterval, generateOutline),
       ]);
-
-      if (generateOutline) {
-        const outlineGeojson = getOutline(surface);
-        geojson.features = [...geojson.features, ...outlineGeojson.features];
-      }
-
-      const { surfaceDefinition, ...rest } = surface;
-
       return {
-        ...rest,
+        ...surfaceInfo(surface),
         glb,
         center: resolvedCenter,
-        download: () => {
-          downloadGlb(glb, surface.name.replace(/\.xml$/, `${JSON.stringify(resolvedCenter)}.glb`));
-        },
+        download: () => downloadGlb(glb, surface.name.replace(/\.xml$/, `${JSON.stringify(resolvedCenter)}.glb`)),
         geojson,
       };
     }),
   );
-
-  return results;
 };
 
 export default toGlbAndContours;

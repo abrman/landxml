@@ -12,7 +12,9 @@ const contoursWorker = createEasyWebWorker<
     // pre-groups triangles by elevation bucket before dispatching workers so
     // total data transferred across the worker boundary is dramatically
     // reduced for typical terrain (most triangles only span one interval).
-    triangles: [x: number, y: number, z: number][][];
+    // Packed as x, y, z for each of a triangle's three vertices (9 numbers per
+    // triangle) — a typed array copies to the worker far cheaper than nested arrays.
+    triangles: Float64Array;
     elevation: number;
   },
   {
@@ -107,12 +109,17 @@ const contoursWorker = createEasyWebWorker<
     };
 
     onMessage((message) => {
-      const { triangles, elevation } = message.payload;
-      const linesAtElevation = triangles.reduce((prev, curr) => {
-        const line = contourLineOnFace(curr, elevation);
-        if (line) prev.push(line);
-        return prev;
-      }, [] as [[number, number], [number, number]][]);
+      const { triangles: t, elevation } = message.payload;
+      const linesAtElevation: [[number, number], [number, number]][] = [];
+      for (let i = 0; i + 8 < t.length; i += 9) {
+        const face: [number, number, number][] = [
+          [t[i]!, t[i + 1]!, t[i + 2]!],
+          [t[i + 3]!, t[i + 4]!, t[i + 5]!],
+          [t[i + 6]!, t[i + 7]!, t[i + 8]!],
+        ];
+        const line = contourLineOnFace(face, elevation);
+        if (line) linesAtElevation.push(line);
+      }
 
       message.resolve({ elevation, polylines: linesToPolyLines(linesAtElevation) });
     });
@@ -232,67 +239,75 @@ export const constructGeojson = (
   return { type: "FeatureCollection", features };
 };
 
-// ─── Pre-computation helper ───────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/**
- * Derives the triangle list and elevation range from a ParsedSurface.
- * Call this once and pass the result to both getContours() and getGlb() when
- * you need both outputs for the same surface — avoids double-traversal of the
- * (potentially large) faces/points arrays.
- */
-export type PrecomputedSurfaceData = {
-  triangles: [x: number, y: number, z: number][][];
-  minElevation: number;
-  maxElevation: number;
-};
-
-export const precomputeSurfaceData = (data: ParsedSurface): PrecomputedSurfaceData => {
-  const { points, faces } = data.surfaceDefinition;
-
-  // OPTIMIZATION: single pass for both triangles and elevation min/max,
-  // avoiding the separate .reduce() over all points that getContours() used.
+/** The lowest and highest point elevation (points without a numeric z are ignored). */
+export const elevationRange = (data: ParsedSurface): { minElevation: number; maxElevation: number } => {
+  const { points } = data.surfaceDefinition;
   let minElevation = Infinity;
   let maxElevation = -Infinity;
-
-  for (const pt of points) {
-    if (pt[2] < minElevation) minElevation = pt[2];
-    if (pt[2] > maxElevation) maxElevation = pt[2];
+  for (let i = 2; i < points.length; i += 3) {
+    const z = points[i]!;
+    if (z < minElevation) minElevation = z;
+    if (z > maxElevation) maxElevation = z;
   }
-
-  const triangles = faces.map((face) => face.map((vert) => points[vert] as [number, number, number]));
-
-  return { triangles, minElevation, maxElevation };
+  return { minElevation, maxElevation };
 };
 
-// ─── Internal bucketing helper ────────────────────────────────────────────────
+/** The contour levels a triangle spans, as integer steps of `interval` (integer steps avoid float drift). */
+const stepsOf = (points: Float64Array, faces: Uint32Array, f: number, interval: number) => {
+  const za = points[faces[f]! * 3 + 2]!;
+  const zb = points[faces[f + 1]! * 3 + 2]!;
+  const zc = points[faces[f + 2]! * 3 + 2]!;
+  return [Math.ceil(Math.min(za, zb, zc) / interval), Math.floor(Math.max(za, zb, zc) / interval)] as const;
+};
 
 /**
- * Groups triangles by the elevation levels they span.
- * Extracted so both getContours() and getContoursGeojson() (inside toGlbAndContours)
- * can share the bucketing without repeating the loop.
+ * Groups triangles by the elevation levels they span, each level's triangles
+ * packed in face order as 9 numbers (x, y, z × 3 vertices). Two passes — count,
+ * then fill — so every level gets one exactly sized typed array.
  */
 export const bucketTrianglesByElevation = (
-  triangles: [x: number, y: number, z: number][][],
+  data: ParsedSurface,
   elevations: number[],
   interval: number,
-): Map<number, [number, number, number][][]> => {
-  const trianglesByElevation = new Map<number, [number, number, number][][]>();
-  for (const e of elevations) trianglesByElevation.set(e, []);
+): Map<number, Float64Array> => {
+  const { points, faces } = data.surfaceDefinition;
+  const firstLevel = Math.round((elevations[0] ?? 0) / interval);
+  const counts = new Uint32Array(elevations.length);
+  const levelIndex = (step: number) => {
+    const i = step - firstLevel;
+    return i >= 0 && i < elevations.length ? i : -1;
+  };
 
-  for (const tri of triangles) {
-    const zMin = Math.min(tri[0]![2], tri[1]![2], tri[2]![2]);
-    const zMax = Math.max(tri[0]![2], tri[1]![2], tri[2]![2]);
-    // OPTIMIZATION: integer-step loop avoids float drift (same fix as contourElevations)
-    const firstStep = Math.ceil(zMin / interval);
-    const lastStep = Math.floor(zMax / interval);
-    for (let step = firstStep; step <= lastStep; step++) {
-      const rounded = step * interval;
-      const bucket = trianglesByElevation.get(rounded);
-      if (bucket) bucket.push(tri);
+  for (let f = 0; f < faces.length; f += 3) {
+    const [first, last] = stepsOf(points, faces, f, interval);
+    for (let step = first; step <= last; step++) {
+      const i = levelIndex(step);
+      if (i >= 0) counts[i]!++;
     }
   }
 
-  return trianglesByElevation;
+  const buckets = elevations.map((_, i) => new Float64Array(counts[i]! * 9));
+  const filled = new Uint32Array(elevations.length);
+  for (let f = 0; f < faces.length; f += 3) {
+    const [first, last] = stepsOf(points, faces, f, interval);
+    for (let step = first; step <= last; step++) {
+      const i = levelIndex(step);
+      if (i < 0) continue;
+      const bucket = buckets[i]!;
+      let o = filled[i]! * 9;
+      filled[i]!++;
+      for (let v = 0; v < 3; v++) {
+        const p = faces[f + v]! * 3;
+        bucket[o++] = points[p]!;
+        bucket[o++] = points[p + 1]!;
+        bucket[o++] = points[p + 2]!;
+      }
+    }
+  }
+
+  return new Map(elevations.map((e, i) => [e, buckets[i]!]));
 };
 
 // ─── Main export ──────────────────────────────────────────────────────────────
@@ -300,28 +315,29 @@ export const bucketTrianglesByElevation = (
 /**
  * Generate contour GeoJSON.
  *
- * Pass `precomputed` when you have already called `precomputeSurfaceData()`
- * (e.g. because you also need a GLB for the same surface).  This skips the
- * redundant traversal of all points and faces.
+ * @param onProgress Called as contour levels finish, with the fraction (0–1) done.
  */
 const getContours = async (
   data: ParsedSurface,
   interval: number = 2,
-  precomputed?: PrecomputedSurfaceData,
+  onProgress?: (fraction: number) => void,
 ): Promise<FeatureCollection<LineString, { z: number }>> => {
-  const { triangles, minElevation, maxElevation } = precomputed ?? precomputeSurfaceData(data);
+  const { minElevation, maxElevation } = elevationRange(data);
 
   const elevations = contourElevations(minElevation, maxElevation, interval);
   if (elevations.length === 0) return constructGeojson([]);
-  const trianglesByElevation = bucketTrianglesByElevation(triangles, elevations, interval);
+  const trianglesByElevation = bucketTrianglesByElevation(data, elevations, interval);
 
+  let done = 0;
   const elevationPolylines = await Promise.all(
-    elevations.map((elevation) =>
-      (contoursWorker.send as any)({
-        triangles: trianglesByElevation.get(elevation) ?? [],
+    elevations.map(async (elevation) => {
+      const result = await (contoursWorker.send as any)({
+        triangles: trianglesByElevation.get(elevation) ?? new Float64Array(0),
         elevation,
-      }),
-    ),
+      });
+      onProgress?.(++done / elevations.length);
+      return result;
+    }),
   );
 
   return constructGeojson(elevationPolylines as { elevation: number; polylines: [number, number][][] }[]);

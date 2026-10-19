@@ -4,6 +4,6 @@ export { default as reprojectGeoJson } from "./public/reproject-geojson";
 export { default as toGlbAndContours } from "./public/to-glb-and-contours";
 export type { GlbAndContoursResult } from "./public/to-glb-and-contours";
 
-// Lower-level building blocks — useful when callers want fine-grained control
-export { precomputeSurfaceData } from "./private/get-contours";
-export type { PrecomputedSurfaceData } from "./private/get-contours";
+// Lower-level building blocks — parse once, then build only what you need (with progress)
+export { parseSurfaces, findCenter, surfaceToGlb, surfaceToContours } from "./public/surfaces";
+export type { LandXmlSurface, GlbCenter } from "./public/surfaces";

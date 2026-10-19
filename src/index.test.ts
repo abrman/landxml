@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import parseXML from "./private/parse-xml";
 import getGlb from "./private/get-glb";
 import getContours, { linesToPolyLines, contourElevations, contourLineOnFace } from "./private/get-contours";
+import getOutline from "./private/get-outline";
+import filterBySurfaceId from "./private/filter-by-surfaceId";
 import toGeojsonContours from "./public/to-geojson-contours";
 import reprojectGeoJson from "./public/reproject-geojson";
 import fs from "fs";
@@ -93,20 +95,69 @@ describe("Parse LandXMLs", () => {
         timeStamp: "2023-11-20T12:40:44",
         name: "LandXML_test_surface",
         description: "Description",
-        surfaceDefinition: {
-          points: [
-            [1, 2, 3],
-            [4, 5, 6],
-            [7, 8, 9],
-            [7, 2, 0],
-          ],
-          faces: [
-            [3, 1, 0],
-            [3, 2, 1],
-          ],
-        },
+        linearUnit: "foot",
       },
     ]);
+    const { points, faces } = parsedLandXML[0]!.surfaceDefinition;
+    expect([...points]).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 7, 2, 0]);
+    expect([...faces]).toEqual([3, 1, 0, 3, 2, 1]);
+  });
+
+  it("Skips invisible faces, decodes entities and reads self-closing header tags", async () => {
+    const xml = `<?xml version="1.0"?>
+<LandXML>
+  <Units><Metric linearUnit="meter" /></Units>
+  <Project name="A &amp; B" />
+  <Application timeStamp="2024-01-01T00:00:00" />
+  <Surfaces>
+    <Surface name="Top &quot;of&quot; cover" desc="">
+      <Definition surfType="TIN">
+        <Pnts>
+          <P id="a">0 0 1</P>
+          <P id="b">  0   10   2  </P>
+          <P id="c">10 0 3</P>
+          <P id="d">10 10 4</P>
+        </Pnts>
+        <Faces>
+          <F>a b c</F>
+          <F i="1">b d c</F>
+          <F>a b missing</F>
+        </Faces>
+      </Definition>
+    </Surface>
+  </Surfaces>
+</LandXML>`;
+    const [surface] = await parseXML(xml);
+    expect(surface).toMatchObject({ name: 'Top "of" cover', sourceFile: "A & B", linearUnit: "meter" });
+    // Northing, easting → x = easting; extra whitespace between numbers is fine.
+    expect([...surface!.surfaceDefinition.points]).toEqual([0, 0, 1, 10, 0, 2, 0, 10, 3, 10, 10, 4]);
+    expect([...surface!.surfaceDefinition.faces]).toEqual([0, 1, 2]);
+  });
+
+  it("Reports parse progress", async () => {
+    const fractions: number[] = [];
+    await parseXML(example_multi_surface_landxml, { onProgress: (f) => fractions.push(f) });
+    expect(fractions[fractions.length - 1]).toBe(1);
+  });
+
+  it("Selects a surface by 0-based index, including the first", async () => {
+    const parsed = await parseXML(example_multi_surface_landxml);
+    expect(filterBySurfaceId(parsed, 0).map((s) => s.name)).toEqual(["LandXML_test_surface_A"]);
+    expect(filterBySurfaceId(parsed, 1).map((s) => s.name)).toEqual(["LandXML_test_surface_B"]);
+    expect(filterBySurfaceId(parsed, -1)).toHaveLength(2);
+  });
+
+  it("Outlines the surface boundary", async () => {
+    const [surface] = await parseXML(example_single_surface_landxml_with_sourcedata_breakline);
+    const outline = getOutline(surface!);
+    // Two triangles sharing one edge: the boundary is the 4 outer edges, one closed loop.
+    expect(outline.features).toHaveLength(1);
+    expect(outline.features[0]!.geometry.coordinates).toHaveLength(5);
+    expect(outline.features[0]!.properties.z).toBe(0);
+  });
+
+  it("Throws when there are no surfaces", async () => {
+    await expect(parseXML(`<LandXML><Units /></LandXML>`)).rejects.toThrow("LandXML doesn't contain any surfaces");
   });
 
   it("Parse landXML with multiple surfaces", async () => {

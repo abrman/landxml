@@ -10,6 +10,9 @@ Easily transform LandXML surfaces into GeoJSON contours or GLB 3D models for use
 - **`toGlb`** — Generate a GLB 3D model from LandXML surfaces.
 - **`toGeojsonContours`** — Convert LandXML surfaces into contour line GeoJSON.
 - **`reprojectGeoJson`** — Reproject GeoJSON coordinates to any projection using `mproj`.
+- **`parseSurfaces`**, **`surfaceToGlb`**, **`surfaceToContours`**, **`findCenter`** — Lower-level building blocks: parse once, build only what you need, with progress callbacks.
+
+Large files are fine: the parser streams points and faces straight into typed arrays rather than building an object tree of the whole document.
 
 ---
 
@@ -133,6 +136,30 @@ const reprojected = reprojectGeoJson(
 
 ---
 
+### Parse once, build what you need (with progress)
+
+The building blocks behind `toGlbAndContours` are exported too — useful for large files where you want to show progress, or only need some surfaces / outputs.
+
+```typescript
+import { parseSurfaces, findCenter, surfaceToGlb, surfaceToContours } from "landxml";
+
+const surfaces = await parseSurfaces(landXmlString, {
+  onProgress: (fraction) => console.log(`Parsing ${Math.round(fraction * 100)}%`),
+});
+
+const center = findCenter(surfaces); // shared median XY of every surface
+for (const surface of surfaces) {
+  const glb = await surfaceToGlb(surface, center);
+  const contours = await surfaceToContours(surface, 1, true, (fraction) => console.log(surface.name, fraction));
+}
+
+// Raw TIN data, in the file's coordinate system and units:
+const { points, faces } = surfaces[0].surfaceDefinition; // Float64Array [x, y, z, …], Uint32Array [a, b, c, …]
+console.log(surfaces[0].wktString, surfaces[0].linearUnit); // e.g. "PROJCS[…]", "USSurveyFoot"
+```
+
+---
+
 ## API Reference
 
 ### `toGlbAndContours(landXmlString, contourInterval?, generateOutline?, center?, surfaceId?)`
@@ -145,7 +172,7 @@ const reprojected = reprojectGeoJson(
 | `center`          | `"auto" \| "origin" \| [x, y]` | `"auto"` | GLB model origin strategy                          |
 | `surfaceId`       | `string \| number`             | `-1`     | Surface name or index; `-1` returns all surfaces   |
 
-Returns `Promise<GlbAndContoursResult[]>` where each element contains `name`, `description`, `sourceFile`, `timeStamp`, `wktString`, `glb`, `center`, `download`, and `geojson`.
+Returns `Promise<GlbAndContoursResult[]>` where each element contains `name`, `description`, `sourceFile`, `timeStamp`, `wktString`, `linearUnit`, `glb`, `center`, `download`, and `geojson`.
 
 ---
 
@@ -158,7 +185,7 @@ Returns `Promise<GlbAndContoursResult[]>` where each element contains `name`, `d
 | `generateOutline` | `boolean`          | `true`  | Append surface boundary as a `z=0` GeoJSON feature |
 | `surfaceId`       | `string \| number` | `-1`    | Surface name or index; `-1` returns all surfaces   |
 
-Returns `Promise<{ name, description, sourceFile, timeStamp, wktString?, geojson }[]>`.
+Returns `Promise<{ name, description, sourceFile, timeStamp, wktString?, linearUnit?, geojson }[]>`.
 
 ---
 
@@ -170,7 +197,30 @@ Returns `Promise<{ name, description, sourceFile, timeStamp, wktString?, geojson
 | `center`        | `"auto" \| "origin" \| [x, y]` | `"auto"` | GLB model origin strategy. 3D models are sensitive to large coordinates — `"auto"` offsets to the XY median |
 | `surfaceId`     | `string \| number`             | `-1`     | Surface name or index; `-1` returns all surfaces                                                            |
 
-Returns `Promise<{ name, description, sourceFile, timeStamp, glb, center, download }[]>`.
+Returns `Promise<{ name, description, sourceFile, timeStamp, wktString?, linearUnit?, glb, center, download }[]>`.
+
+---
+
+### `parseSurfaces(landXmlString, options?)`
+
+| Option       | Type                         | Default | Description                                         |
+| ------------ | ---------------------------- | ------- | --------------------------------------------------- |
+| `surfaceId`  | `string \| number`           | `-1`    | Surface name or 0-based index; `-1` keeps all       |
+| `onProgress` | `(fraction: number) => void` | —       | Called as the file is read, with the fraction 0 – 1 |
+
+Returns `Promise<LandXmlSurface[]>`: each has `name`, `description`, `sourceFile`, `timeStamp`, `wktString?`, `linearUnit?` and `surfaceDefinition: { points: Float64Array, faces: Uint32Array }` — `x, y, z` per point (x = easting, y = northing) and three point indices per visible face.
+
+### `findCenter(surfaces, center?)`
+
+The GLB origin for `surfaces`: `"auto"` (default) is the median XY of all their points, `"origin"` is `[0, 0]`, or pass an explicit `[x, y]`.
+
+### `surfaceToGlb(surface, center)`
+
+Returns `Promise<Uint8Array>` — the surface as a GLB, positions relative to `center` with GLTF's y-up axes (`[x, z, -y]`).
+
+### `surfaceToContours(surface, contourInterval?, generateOutline?, onProgress?)`
+
+Returns `Promise<FeatureCollection<LineString, { z }>>` — contour lines, plus the outline as a `z = 0` feature when `generateOutline` (default `true`). `onProgress` gets the fraction of contour levels done.
 
 ---
 

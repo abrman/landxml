@@ -1,7 +1,5 @@
-import filterBySurfaceId from "../private/filter-by-surfaceId";
-import getGlb, { findXYAxisMedians } from "../private/get-glb";
 import downloadGlb from "../private/download-glb";
-import parseXML, { ParsedSurface } from "../private/parse-xml";
+import { findCenter, parseSurfaces, surfaceInfo, surfaceToGlb, type GlbCenter } from "./surfaces";
 
 /**
  * @param landXmlString
@@ -14,14 +12,15 @@ import parseXML, { ParsedSurface } from "../private/parse-xml";
  * @returns {string} glbs[].description - Description of surface as defined in LandXML
  * @returns {string} glbs[].sourceFile - Source file of where the LandXML was generated from.
  * @returns {string} glbs[].timeStamp - Timestamp of when the surface was exported into LandXML
+ * @returns {string} glbs[].wktString - WKT string of LandXML coordinate system projection
+ * @returns {string} glbs[].linearUnit - Linear unit declared in the LandXML's `<Units>`
  * @returns {Uint8Array} glbs[].glb - Uint8Array binary data of glb
  * @returns {[number, number]} glbs[].center - Shared offset center applied to all GLBs
  * @returns {function(): void} glbs[].download - Convenient way to download the GLB, within the filename the new center will be appended.
  */
-
 const toGlb = async (
   landXmlString: string,
-  center: "auto" | "origin" | [x: number, y: number] = "auto",
+  center: GlbCenter = "auto",
   surfaceId: string | number = -1,
 ): Promise<
   {
@@ -29,56 +28,27 @@ const toGlb = async (
     description: string;
     sourceFile: string;
     timeStamp: string;
+    wktString?: string;
+    linearUnit?: string;
     glb: Uint8Array;
     center: [x: number, y: number];
     download: () => void;
   }[]
 > => {
-  let requestedParsedSurfaces = filterBySurfaceId(await parseXML(landXmlString), surfaceId);
+  const surfaces = await parseSurfaces(landXmlString, { surfaceId });
+  const resolvedCenter = findCenter(surfaces, center);
 
-  // Resolve the shared center once for all surfaces so that multi-surface
-  // LandXMLs remain correctly positioned relative to each other.
-  let resolvedCenter: [x: number, y: number];
-  if (center === "origin") {
-    resolvedCenter = [0, 0];
-  } else if (center === "auto") {
-    // Combine all points from every surface to compute one shared median center.
-    const allPoints = requestedParsedSurfaces.flatMap((s) => s.surfaceDefinition.points);
-    resolvedCenter = findXYAxisMedians(allPoints);
-  } else {
-    resolvedCenter = center;
-  }
-
-  const glbs = await Promise.all(
-    requestedParsedSurfaces.map(
-      (surface) =>
-        new Promise<{
-          name: string;
-          description: string;
-          sourceFile: string;
-          timeStamp: string;
-          glb: Uint8Array;
-          center: [x: number, y: number];
-          download: () => void;
-        }>(async (resolve, reject) => {
-          try {
-            const { glb } = await getGlb(surface, resolvedCenter);
-            const { surfaceDefinition, ...rest } = surface;
-            resolve({
-              ...rest,
-              glb,
-              center: resolvedCenter,
-              download: () => {
-                downloadGlb(glb, surface.name.replace(/\.xml$/, `${JSON.stringify(resolvedCenter)}.glb`));
-              },
-            });
-          } catch (e) {
-            reject(e);
-          }
-        }),
-    ),
+  return Promise.all(
+    surfaces.map(async (surface) => {
+      const glb = await surfaceToGlb(surface, resolvedCenter);
+      return {
+        ...surfaceInfo(surface),
+        glb,
+        center: resolvedCenter,
+        download: () => downloadGlb(glb, surface.name.replace(/\.xml$/, `${JSON.stringify(resolvedCenter)}.glb`)),
+      };
+    }),
   );
-  return glbs;
 };
 
 export default toGlb;

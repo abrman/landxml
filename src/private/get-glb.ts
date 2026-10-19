@@ -1,44 +1,46 @@
 import { Document, WebIO } from "@gltf-transform/core";
 import type { ParsedSurface } from "./parse-xml";
 
-export const findXYAxisMedians = (vertices: [number, number, number][]) => {
-  vertices = vertices.slice().filter(Boolean);
-  const middleIndex = Math.floor(vertices.length / 2);
-  const medianX = vertices.slice().sort((a, b) => a[0] - b[0])[middleIndex]?.[0];
-  const medianY = vertices.slice().sort((a, b) => a[1] - b[1])[middleIndex]?.[1];
-  return [medianX, medianY] as [x: number, y: number];
+/** The value at the middle (index ⌊n/2⌋) once sorted. */
+const median = (values: Float64Array) => values.sort()[Math.floor(values.length / 2)]!;
+
+/**
+ * The median x and y over every point of `surfaces` — the GLB origin, since 3D
+ * models lose precision far from [0, 0, 0]. One center for all surfaces keeps
+ * them positioned relative to each other.
+ */
+export const findXYAxisMedians = (surfaces: ParsedSurface[]): [x: number, y: number] => {
+  const count = surfaces.reduce((n, s) => n + s.surfaceDefinition.points.length / 3, 0);
+  const xs = new Float64Array(count);
+  const ys = new Float64Array(count);
+  let i = 0;
+  for (const { surfaceDefinition } of surfaces) {
+    const pts = surfaceDefinition.points;
+    for (let p = 0; p < pts.length; p += 3, i++) {
+      xs[i] = pts[p]!;
+      ys[i] = pts[p + 1]!;
+    }
+  }
+  return [median(xs), median(ys)];
 };
 
+/** A GLB of the surface's TIN: positions relative to `customCenter` (default: the surface's own median). */
 const getGlb = async (data: ParsedSurface, customCenter?: [x: number, y: number]) => {
-  const center = customCenter || findXYAxisMedians(data.surfaceDefinition.points);
+  const center = customCenter || findXYAxisMedians([data]);
   const pts = data.surfaceDefinition.points;
-  const facesFlat = data.surfaceDefinition.faces;
 
-  // OPTIMIZATION: pre-allocate typed arrays instead of building intermediate
-  // JS arrays with chained .map().reduce().concat().
-  // This avoids O(n) GC pressure from throwaway arrays and gives the GPU
-  // upload path a single contiguous buffer from the start.
-  const vertexBuffer = new Float32Array(pts.length * 3);
-  for (let i = 0; i < pts.length; i++) {
-    const [x, y, z] = pts[i] as [number, number, number];
+  const vertexBuffer = new Float32Array(pts.length);
+  for (let i = 0; i < pts.length; i += 3) {
     // Axis remap: LandXML top-down [x,y,z] → GLTF front-back [x,z,-y]
-    vertexBuffer[i * 3] = x - center[0];
-    vertexBuffer[i * 3 + 1] = z;
-    vertexBuffer[i * 3 + 2] = -(y - center[1]);
-  }
-
-  const indexBuffer = new Uint32Array(facesFlat.length * 3);
-  for (let i = 0; i < facesFlat.length; i++) {
-    const [a, b, c] = facesFlat[i] as [number, number, number];
-    indexBuffer[i * 3] = a;
-    indexBuffer[i * 3 + 1] = b;
-    indexBuffer[i * 3 + 2] = c;
+    vertexBuffer[i] = pts[i]! - center[0];
+    vertexBuffer[i + 1] = pts[i + 2]!;
+    vertexBuffer[i + 2] = -(pts[i + 1]! - center[1]);
   }
 
   const doc = new Document();
   const buffer = doc.createBuffer();
   const position = doc.createAccessor().setType("VEC3").setArray(vertexBuffer).setBuffer(buffer);
-  const indices = doc.createAccessor().setType("SCALAR").setArray(indexBuffer).setBuffer(buffer);
+  const indices = doc.createAccessor().setType("SCALAR").setArray(data.surfaceDefinition.faces).setBuffer(buffer);
   const prim = doc.createPrimitive().setAttribute("POSITION", position).setIndices(indices);
 
   const mesh = doc.createMesh().addPrimitive(prim);
