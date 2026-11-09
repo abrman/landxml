@@ -331,7 +331,7 @@ const getContours = async (
   let done = 0;
   const elevationPolylines = await Promise.all(
     elevations.map(async (elevation) => {
-      const result = await (contoursWorker.send as any)({
+      const result = await contoursWorker.send({
         triangles: trianglesByElevation.get(elevation) ?? new Float64Array(0),
         elevation,
       });
@@ -340,7 +340,7 @@ const getContours = async (
     }),
   );
 
-  return constructGeojson(elevationPolylines as { elevation: number; polylines: [number, number][][] }[]);
+  return constructGeojson(elevationPolylines);
 };
 
 export default getContours;

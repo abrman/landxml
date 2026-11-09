@@ -1,5 +1,11 @@
 # landxml
 
+## 0.10.1
+
+### Patch Changes
+
+- Fix fresh installs failing with a 404 for `cancelable-promise-jq`. That package was unpublished from npm on 2026-11-02, and `easy-web-worker@6`, which landxml depended on, required it as a peer dependency. landxml now uses `easy-web-worker@8`, which depends on `easy-cancelable-promise` instead, so `cancelable-promise-jq` is no longer anywhere in the dependency tree. No API or output changes.
+
 ## 0.10.0
 
 ### Minor Changes

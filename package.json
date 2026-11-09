@@ -1,6 +1,6 @@
 {
   "name": "landxml",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "Parse LandXML surfaces on the modern web.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -38,7 +38,7 @@
   "dependencies": {
     "@gltf-transform/core": "^3.9.0",
     "@vitest/web-worker": "^3.2.4",
-    "easy-web-worker": "^6.2.0",
+    "easy-web-worker": "^8.0.3",
     "mproj": "^0.0.7"
   }
 }
